@@ -18,7 +18,7 @@ async function startServer() {
   if (!fs.existsSync(CSV_FILE)) {
     fs.writeFileSync(
       CSV_FILE,
-      'DataHora;Nome;CPF;Telefone;Email;CEP;Rua;Numero;Complemento;Plano;ValorMensal\n',
+      'DataHora;Nome;CPF;Telefone;Email;Bairro;CEP;Rua;Numero;Complemento;Plano;ValorMensal\n',
       'utf-8'
     );
   }
@@ -26,9 +26,9 @@ async function startServer() {
   // API to submit lead to spreadsheet
   app.post('/api/leads', (req, res) => {
     try {
-      const { name, cpf, phone, email, cep, street, number, complement, planName, planPrice } = req.body;
+      const { name, cpf, phone, email, neighborhood, cep, street, number, complement, planName, planPrice } = req.body;
       const date = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-      const row = `"${date}";"${name || ''}";"${cpf || ''}";"${phone || ''}";"${email || ''}";"${cep || ''}";"${street || ''}";"${number || ''}";"${complement || ''}";"${planName || ''}";"${planPrice || ''}"\n`;
+      const row = `"${date}";"${name || ''}";"${cpf || ''}";"${phone || ''}";"${email || ''}";"${neighborhood || ''}";"${cep || ''}";"${street || ''}";"${number || ''}";"${complement || ''}";"${planName || ''}";"${planPrice || ''}"\n`;
 
       fs.appendFileSync(CSV_FILE, row, 'utf-8');
       res.json({ success: true, message: 'Dados gravados na planilha com sucesso!' });
@@ -57,12 +57,13 @@ async function startServer() {
           cpf: values[2] || '',
           phone: values[3] || '',
           email: values[4] || '',
-          cep: values[5] || '',
-          street: values[6] || '',
-          number: values[7] || '',
-          complement: values[8] || '',
-          planName: values[9] || '',
-          planPrice: values[10] || '',
+          neighborhood: values[5] || '',
+          cep: values[6] || '',
+          street: values[7] || '',
+          number: values[8] || '',
+          complement: values[9] || '',
+          planName: values[10] || '',
+          planPrice: values[11] || '',
         };
       });
 

@@ -3,6 +3,7 @@ export interface LeadPayload {
   cpf: string;
   phone: string;
   email: string;
+  neighborhood?: string;
   cep: string;
   street: string;
   number: string;
@@ -56,6 +57,7 @@ function doPost(e) {
         "CPF",
         "WhatsApp / Celular",
         "E-mail",
+        "Bairro",
         "CEP",
         "Rua / Avenida",
         "Número",
@@ -65,7 +67,7 @@ function doPost(e) {
         "Status"
       ]);
       
-      var headerRange = sheet.getRange(1, 1, 1, 12);
+      var headerRange = sheet.getRange(1, 1, 1, 13);
       headerRange.setBackground("#1f0d38");
       headerRange.setFontColor("#ffffff");
       headerRange.setFontWeight("bold");
@@ -82,6 +84,7 @@ function doPost(e) {
       data.cpf || "",
       data.phone || "",
       data.email || "",
+      data.neighborhood || "",
       data.cep || "",
       data.street || "",
       data.number || "",
@@ -174,6 +177,7 @@ export const createNewLeadSpreadsheet = async (accessToken: string): Promise<str
       'CPF',
       'WhatsApp / Celular',
       'E-mail',
+      'Bairro',
       'CEP',
       'Rua / Avenida',
       'Número',
@@ -185,7 +189,7 @@ export const createNewLeadSpreadsheet = async (accessToken: string): Promise<str
   ];
 
   await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Leads!A1:L1?valueInputOption=USER_ENTERED`,
+    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Leads!A1:M1?valueInputOption=USER_ENTERED`,
     {
       method: 'PUT',
       headers: {
@@ -219,6 +223,7 @@ export const appendLeadToGoogleSheet = async (
       lead.cpf,
       lead.phone,
       lead.email,
+      lead.neighborhood || '',
       lead.cep,
       lead.street,
       lead.number,
@@ -274,7 +279,7 @@ export const getLeadSpreadsheetRows = async (
   const res = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(
       firstSheetTitle
-    )}!A1:L100`,
+    )}!A1:Z100`,
     {
       headers: { Authorization: `Bearer ${accessToken}` },
     }

@@ -20,9 +20,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [cpf, setCpf] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [cep, setCep] = useState('01310-100');
-  const [street, setStreet] = useState('Av. Paulista');
-  const [number, setNumber] = useState('1578');
+  const [neighborhood, setNeighborhood] = useState('Belford Roxo');
+  const [cep, setCep] = useState('');
+  const [street, setStreet] = useState('');
+  const [number, setNumber] = useState('');
   const [complement, setComplement] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
@@ -36,6 +37,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       cpf,
       phone,
       email,
+      neighborhood,
       cep,
       street,
       number,
@@ -94,7 +96,14 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     // 4. Format message and WhatsApp redirect
     // Number: (21) 2762-5350 -> 552127625350
     const chosenServiceName = `${plan.name} ${plan.subtitle}`.trim();
-    const message = `Olá! Acabei de me cadastrar pelo site da Nova ISP e desejo concluir minha contratação.\n\n*Serviço / Plano Escolhido:* ${chosenServiceName} (R$ ${plan.priceFidelity.toFixed(2).replace('.', ',')}/mês)\n\n*Meus Dados:*\n- *Nome:* ${name}\n- *CPF:* ${cpf}\n- *Telefone:* ${phone}\n- *E-mail:* ${email}\n- *Endereço:* ${street}, nº ${number}${complement ? ' (' + complement + ')' : ''} - CEP: ${cep}\n\nAguardo o retorno para agendamento!`;
+    const formattedComplement = complement
+      ? complement.trim().startsWith('(') && complement.trim().endsWith(')')
+        ? ` ${complement.trim()}`
+        : ` (${complement.trim()})`
+      : '';
+    const addressFormatted = `${street}, nº ${number}${formattedComplement}`;
+
+    const message = `Olá! Acabei de me cadastrar pelo site da Nova ISP e desejo concluir minha contratação.\n\n*Serviço / Plano Escolhido:* ${chosenServiceName} (R$ ${plan.priceFidelity.toFixed(2).replace('.', ',')}/mês)\n\n*Meus Dados:*\n- *Nome:* ${name}\n- *CPF:* ${cpf}\n- *Telefone:* ${phone}\n- *E-mail:* ${email}\n- *Endereço:* ${addressFormatted}\n- *Bairro:* ${neighborhood}\n- *CEP:* ${cep}\n\nAguardo o retorno para agendamento!`;
 
     const whatsappUrl = `https://wa.me/552127625350?text=${encodeURIComponent(message)}`;
     setRedirectUrl(whatsappUrl);
@@ -240,11 +249,52 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </div>
 
             <h3 className="text-base font-extrabold text-slate-900 pt-2">Endereço de Instalação</h3>
+
+            {/* Campo Bairro com 3 opções */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                <span>Bairro</span>
+                <span className="text-[11px] text-purple-700 font-semibold">Região de Cobertura Nova ISP</span>
+              </label>
+
+              {/* Botões de seleção rápida das 3 opções */}
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {(['Belford Roxo', 'Duque de Caxias', 'Piabetá'] as const).map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setNeighborhood(opt)}
+                    className={`py-2 px-2 text-center rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      neighborhood === opt
+                        ? 'bg-[#7738b5] text-white border-[#7738b5] shadow-sm ring-2 ring-purple-200'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+
+              {/* Select tradicional */}
+              <select
+                value={neighborhood}
+                onChange={(e) => setNeighborhood(e.target.value)}
+                required
+                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none bg-white font-medium text-slate-800"
+              >
+                <option value="Belford Roxo">Belford Roxo</option>
+                <option value="Duque de Caxias">Duque de Caxias</option>
+                <option value="Piabetá">Piabetá</option>
+              </select>
+            </div>
+
             <div className="grid grid-cols-3 gap-2">
               <div className="col-span-1">
                 <label className="block text-xs font-bold text-slate-700 mb-1">CEP</label>
                 <input
                   type="text"
+                  required
+                  placeholder="26182-010"
                   value={cep}
                   onChange={(e) => setCep(e.target.value)}
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none"
@@ -254,6 +304,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <label className="block text-xs font-bold text-slate-700 mb-1">Rua / Avenida</label>
                 <input
                   type="text"
+                  required
+                  placeholder="Ex: Rua Lamartine Júnior"
                   value={street}
                   onChange={(e) => setStreet(e.target.value)}
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none"
@@ -266,6 +318,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <label className="block text-xs font-bold text-slate-700 mb-1">Número</label>
                 <input
                   type="text"
+                  required
+                  placeholder="Ex: 12"
                   value={number}
                   onChange={(e) => setNumber(e.target.value)}
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none"
@@ -275,7 +329,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <label className="block text-xs font-bold text-slate-700 mb-1">Complemento / Apto</label>
                 <input
                   type="text"
-                  placeholder="Apto, Bloco, Casa 2"
+                  placeholder="Ex: Bloco C, Apto 102"
                   value={complement}
                   onChange={(e) => setComplement(e.target.value)}
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none"
