@@ -24,13 +24,53 @@ async function startServer() {
   }
 
   // API to submit lead to spreadsheet
-  app.post('/api/leads', (req, res) => {
+  app.post('/api/leads', async (req, res) => {
     try {
-      const { name, cpf, phone, email, neighborhood, cep, street, number, complement, planName, planPrice } = req.body;
+      const {
+        name,
+        cpf,
+        phone,
+        email,
+        neighborhood,
+        cep,
+        street,
+        number,
+        complement,
+        planName,
+        planPrice,
+        appsScriptUrl,
+      } = req.body;
       const date = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
       const row = `"${date}";"${name || ''}";"${cpf || ''}";"${phone || ''}";"${email || ''}";"${neighborhood || ''}";"${cep || ''}";"${street || ''}";"${number || ''}";"${complement || ''}";"${planName || ''}";"${planPrice || ''}"\n`;
 
       fs.appendFileSync(CSV_FILE, row, 'utf-8');
+
+      // Server-side forward to Google Apps Script webhook (bypasses browser CORS completely)
+      if (appsScriptUrl && typeof appsScriptUrl === 'string' && appsScriptUrl.startsWith('http')) {
+        try {
+          await fetch(appsScriptUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: name || '',
+              cpf: cpf || '',
+              phone: phone || '',
+              email: email || '',
+              neighborhood: neighborhood || '',
+              cep: cep || '',
+              street: street || '',
+              number: number || '',
+              complement: complement || '',
+              planName: planName || '',
+              planPrice: planPrice || '',
+              dataHora: date,
+            }),
+          });
+        } catch (scriptErr) {
+          console.warn('Forward to Google Apps Script notice:', scriptErr);
+        }
+      }
+
       res.json({ success: true, message: 'Dados gravados na planilha com sucesso!' });
     } catch (err: any) {
       console.error('Error saving lead to spreadsheet:', err);

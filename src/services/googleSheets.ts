@@ -116,16 +116,19 @@ export const sendLeadToAppsScript = async (
   lead: LeadPayload
 ): Promise<boolean> => {
   try {
+    const payload = {
+      ...lead,
+      dataHora: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+    };
+
     await fetch(webhookUrl, {
       method: 'POST',
-      mode: 'no-cors', // Google Apps Script redirects with 302, no-cors ensures submission passes
+      mode: 'no-cors',
+      keepalive: true,
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'text/plain;charset=utf-8',
       },
-      body: JSON.stringify({
-        ...lead,
-        dataHora: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
-      }),
+      body: JSON.stringify(payload),
     });
     return true;
   } catch (err) {

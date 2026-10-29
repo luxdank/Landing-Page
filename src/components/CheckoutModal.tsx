@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { Plan } from '../types';
 import { X, CheckCircle2, ArrowRight, ArrowLeft, MessageCircle, Loader2 } from 'lucide-react';
 import { getAccessToken } from '../services/googleAuth';
-import { getSavedSpreadsheetId, appendLeadToGoogleSheet } from '../services/googleSheets';
+import {
+  getSavedSpreadsheetId,
+  appendLeadToGoogleSheet,
+  sendLeadToAppsScript,
+} from '../services/googleSheets';
 
 interface CheckoutModalProps {
   plan: Plan;
@@ -46,54 +50,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       planPrice: `R$ ${plan.priceFidelity.toFixed(2).replace('.', ',')}`,
     };
 
-    // 1. Try appending directly to connected Google Sheets (OAuth or Apps Script Webhook)
-    try {
-      const appsScriptUrl = localStorage.getItem('novaisp_apps_script_url');
-      if (appsScriptUrl) {
-        fetch(appsScriptUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...leadData,
-            dataHora: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
-          }),
-        }).catch((e) => console.warn('Apps script post error:', e));
-      }
-
-      const token = await getAccessToken();
-      const spreadsheetId = getSavedSpreadsheetId();
-      if (token && spreadsheetId) {
-        await appendLeadToGoogleSheet(token, spreadsheetId, leadData);
-      }
-    } catch (err) {
-      console.warn('Google Sheets append notice:', err);
-    }
-
-    // 2. Also send data to server-side backup spreadsheet (/api/leads)
-    try {
-      await fetch('/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...leadData,
-          date: new Date().toISOString(),
-        }),
-      });
-    } catch (err) {
-      console.warn('Fallback to local storage for spreadsheet recording:', err);
-    }
-
-    // 3. Backup to localStorage spreadsheet
-    try {
-      const existing = JSON.parse(localStorage.getItem('novaisp_planilha_leads') || '[]');
-      existing.push({ ...leadData, date: new Date().toISOString() });
-      localStorage.setItem('novaisp_planilha_leads', JSON.stringify(existing));
-    } catch (err) {
-      console.error(err);
-    }
-
-    // 4. Format message and WhatsApp redirect
+    // 1. Prepare WhatsApp message & redirection URL
     // Number: (21) 2762-5350 -> 552127625350
     const chosenServiceName = `${plan.name} ${plan.subtitle}`.trim();
     const formattedComplement = complement
@@ -105,16 +62,67 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
     const message = `Olá! Acabei de me cadastrar pelo site da Nova ISP e desejo concluir minha contratação.\n\n*Serviço / Plano Escolhido:* ${chosenServiceName} (R$ ${plan.priceFidelity.toFixed(2).replace('.', ',')}/mês)\n\n*Meus Dados:*\n- *Nome:* ${name}\n- *CPF:* ${cpf}\n- *Telefone:* ${phone}\n- *E-mail:* ${email}\n- *Endereço:* ${addressFormatted}\n- *Bairro:* ${neighborhood}\n- *CEP:* ${cep}\n\nAguardo o retorno para agendamento!`;
 
-    const whatsappUrl = `https://wa.me/552127625350?text=${encodeURIComponent(message)}`;
-    setRedirectUrl(whatsappUrl);
+    const targetPhone = '552127625350';
+    const whatsappUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`;
 
-    // Call success callback
+    const appsScriptUrl = localStorage.getItem('novaisp_apps_script_url');
+
+    // 2. Perform all spreadsheet saves and wait for completion so no data is dropped
+    try {
+      const token = await getAccessToken();
+      const spreadsheetId = getSavedSpreadsheetId();
+
+      await Promise.allSettled([
+        // A. Server-side CSV record + Server forward to Google Apps Script webhook
+        fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...leadData,
+            appsScriptUrl: appsScriptUrl || '',
+            date: new Date().toISOString(),
+          }),
+        }),
+
+        // B. Client-side Google Apps Script Webhook (with keepalive: true)
+        appsScriptUrl ? sendLeadToAppsScript(appsScriptUrl, leadData) : Promise.resolve(false),
+
+        // C. Client-side Google Sheets OAuth REST API (if connected)
+        token && spreadsheetId
+          ? appendLeadToGoogleSheet(token, spreadsheetId, leadData)
+          : Promise.resolve(false),
+      ]);
+    } catch (saveError) {
+      console.warn('Aviso no salvamento da planilha:', saveError);
+    }
+
+    // 3. Backup to browser localStorage spreadsheet
+    try {
+      const existing = JSON.parse(localStorage.getItem('novaisp_planilha_leads') || '[]');
+      existing.push({ ...leadData, date: new Date().toISOString() });
+      localStorage.setItem('novaisp_planilha_leads', JSON.stringify(existing));
+    } catch (err) {
+      console.error('LocalStorage backup notice:', err);
+    }
+
+    // 4. Update UI state and notify
+    setIsSubmitting(false);
+    setRedirectUrl(whatsappUrl);
     onSuccess();
 
-    // Redirect to WhatsApp
-    setTimeout(() => {
-      window.location.href = whatsappUrl;
-    }, 1200);
+    // 5. Open WhatsApp redirection to (21) 2762-5350
+    try {
+      const opened = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      if (!opened) {
+        setTimeout(() => {
+          window.location.assign(whatsappUrl);
+        }, 1200);
+      }
+    } catch {
+      setTimeout(() => {
+        window.location.assign(whatsappUrl);
+      }, 1200);
+    }
   };
 
   return (
@@ -355,10 +363,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             <div className="pt-2">
               <a
                 href={redirectUrl}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider shadow-md transition-all"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider shadow-md hover:shadow-lg transition-all cursor-pointer"
               >
                 <MessageCircle className="w-4 h-4" />
-                <span>Clique aqui se não abrir automaticamente</span>
+                <span>Abrir WhatsApp (21) 2762-5350</span>
               </a>
             </div>
           </div>

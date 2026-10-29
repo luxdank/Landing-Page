@@ -115,7 +115,7 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({ isOpen, on
     setIsTestingScript(true);
     saveAppsScriptUrl(appsScriptUrl.trim());
     try {
-      await sendLeadToAppsScript(appsScriptUrl.trim(), {
+      const testLead = {
         name: 'Lead Teste Nova ISP',
         cpf: '000.000.000-00',
         phone: '(21) 98765-4321',
@@ -127,7 +127,22 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({ isOpen, on
         complement: 'Bloco C',
         planName: '800MB + NovaEduca',
         planPrice: 'R$ 135,90',
-      });
+      };
+
+      // Test both direct client call and server proxy call
+      await Promise.allSettled([
+        sendLeadToAppsScript(appsScriptUrl.trim(), testLead),
+        fetch('/api/leads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...testLead,
+            appsScriptUrl: appsScriptUrl.trim(),
+            date: new Date().toISOString(),
+          }),
+        }),
+      ]);
+
       setStatusMessage({
         type: 'success',
         text: 'Linha de teste enviada para sua planilha do Google Sheets! Verifique sua planilha.',
