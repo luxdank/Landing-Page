@@ -30,6 +30,8 @@ import {
   Code2,
   Copy,
   Send,
+  Download,
+  Users,
 } from 'lucide-react';
 
 interface GoogleSheetsModalProps {
@@ -38,7 +40,7 @@ interface GoogleSheetsModalProps {
 }
 
 export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'script' | 'oauth'>('script');
+  const [activeTab, setActiveTab] = useState<'script' | 'oauth' | 'leads'>('script');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [spreadsheetId, setSpreadsheetId] = useState<string>('');
@@ -49,6 +51,7 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({ isOpen, on
   const [isTestingScript, setIsTestingScript] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
   const [rows, setRows] = useState<string[][]>([]);
+  const [localLeads, setLocalLeads] = useState<any[]>([]);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -68,6 +71,8 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({ isOpen, on
 
     const savedScriptUrl = getSavedAppsScriptUrl();
     if (savedScriptUrl) setAppsScriptUrl(savedScriptUrl);
+
+    loadLocalLeads();
 
     return () => unsubscribe();
   }, []);
@@ -110,47 +115,47 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({ isOpen, on
     });
   };
 
+  const loadLocalLeads = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/leads');
+      const data = await res.json();
+      setLocalLeads(data.leads || []);
+    } catch (err) {
+      console.warn('Erro ao carregar leads locais:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleTestAppsScript = async () => {
     if (!appsScriptUrl.trim()) return;
     setIsTestingScript(true);
+    setStatusMessage(null);
     saveAppsScriptUrl(appsScriptUrl.trim());
     try {
-      const testLead = {
-        name: 'Lead Teste Nova ISP',
-        cpf: '000.000.000-00',
-        phone: '(21) 98765-4321',
-        email: 'teste@novaisp.com.br',
-        neighborhood: 'Belford Roxo',
-        cep: '26182-010',
-        street: 'Rua Lamartine Júnior',
-        number: '12',
-        complement: 'Bloco C',
-        planName: '800MB + NovaEduca',
-        planPrice: 'R$ 135,90',
-      };
-
-      // Test both direct client call and server proxy call
-      await Promise.allSettled([
-        sendLeadToAppsScript(appsScriptUrl.trim(), testLead),
-        fetch('/api/leads', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...testLead,
-            appsScriptUrl: appsScriptUrl.trim(),
-            date: new Date().toISOString(),
-          }),
-        }),
-      ]);
-
-      setStatusMessage({
-        type: 'success',
-        text: 'Linha de teste enviada para sua planilha do Google Sheets! Verifique sua planilha.',
+      const res = await fetch('/api/test-sheets-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: appsScriptUrl.trim() }),
       });
+      const data = await res.json();
+
+      if (data.success) {
+        setStatusMessage({
+          type: 'success',
+          text: data.message || 'Sucesso! O lead de teste foi gravado na sua planilha Google.',
+        });
+      } else {
+        setStatusMessage({
+          type: 'error',
+          text: data.error || 'Erro ao conectar ao Google Apps Script.',
+        });
+      }
     } catch (err: any) {
       setStatusMessage({
         type: 'error',
-        text: 'Erro ao enviar lead de teste. Verifique se o App da Web está com acesso "Qualquer pessoa".',
+        text: 'Erro de comunicação ao testar o webhook.',
       });
     } finally {
       setIsTestingScript(false);
@@ -294,6 +299,20 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({ isOpen, on
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span>Conexão Direta (Conta Google)</span>
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('leads');
+              loadLocalLeads();
+            }}
+            className={`pb-3 px-4 border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
+              activeTab === 'leads'
+                ? 'border-emerald-600 text-emerald-700'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>📋 Leads Recebidos ({localLeads.length})</span>
           </button>
         </div>
 
@@ -622,6 +641,75 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({ isOpen, on
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB 3: LOCAL LEADS STORED ON SERVER */}
+        {activeTab === 'leads' && (
+          <div className="space-y-4">
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Banco de Dados de Leads (Backup Local Garantido)
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Todos os cadastros feitos pelo formulário são gravados de forma segura aqui no servidor.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={loadLocalLeads}
+                  disabled={isLoading}
+                  className="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50 cursor-pointer shadow-xs"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                  <span>Atualizar</span>
+                </button>
+                <a
+                  href="/api/leads/download"
+                  download="planilha_leads_novaisp.csv"
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Baixar Planilha (.csv)</span>
+                </a>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-2xl border border-slate-200 max-h-80 overflow-y-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold sticky top-0">
+                    <th className="py-2.5 px-3">Data/Hora</th>
+                    <th className="py-2.5 px-3">Nome</th>
+                    <th className="py-2.5 px-3">Contato</th>
+                    <th className="py-2.5 px-3">CEP</th>
+                    <th className="py-2.5 px-3">Plano</th>
+                    <th className="py-2.5 px-3">Valor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {localLeads.length > 0 ? (
+                    localLeads.map((lead, idx) => (
+                      <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 text-slate-600">
+                        <td className="py-2 px-3 whitespace-nowrap font-medium text-slate-700">{lead.date}</td>
+                        <td className="py-2 px-3 font-bold text-slate-900">{lead.name}</td>
+                        <td className="py-2 px-3 whitespace-nowrap text-emerald-700 font-semibold">{lead.phone}</td>
+                        <td className="py-2 px-3 whitespace-nowrap">{lead.cep}</td>
+                        <td className="py-2 px-3 font-semibold text-purple-900">{lead.planName}</td>
+                        <td className="py-2 px-3 font-bold text-slate-900">{lead.planPrice}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-slate-400">
+                        Nenhum lead encontrado no backup local.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

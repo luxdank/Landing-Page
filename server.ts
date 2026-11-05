@@ -51,6 +51,9 @@ async function startServer() {
           ? appsScriptUrl
           : 'https://script.google.com/macros/s/AKfycbyKAY8xDvPkgjMowhNDeFqPYq07GQ_BjsrJQbtSsD6jotkhSkNA6oJ9qZrfZNxBZ6tL-w/exec';
 
+      let googleStatus = 200;
+      let googleError = '';
+
       if (targetAppsScriptUrl) {
         try {
           const scriptRes = await fetch(targetAppsScriptUrl, {
@@ -72,16 +75,84 @@ async function startServer() {
             }),
           });
           const respText = await scriptRes.text();
+          googleStatus = scriptRes.status;
           console.log(`[Google Apps Script] Status: ${scriptRes.status}, Response: ${respText.slice(0, 150)}`);
-        } catch (scriptErr) {
+          if (scriptRes.status === 401 || respText.includes('unable to open the file') || respText.includes('Page Not Found')) {
+            googleError = 'Google retornou erro 401 (Não autorizado). O App da Web precisa ser implantado com acesso "Qualquer pessoa" (Anyone).';
+          }
+        } catch (scriptErr: any) {
           console.warn('Forward to Google Apps Script notice:', scriptErr);
+          googleError = scriptErr.message;
         }
       }
 
-      res.json({ success: true, message: 'Dados gravados na planilha com sucesso!' });
+      res.json({
+        success: true,
+        message: 'Dados gravados com sucesso!',
+        googleStatus,
+        googleError: googleError || undefined,
+      });
     } catch (err: any) {
       console.error('Error saving lead to spreadsheet:', err);
       res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // Diagnostic API to test Apps Script URL in real-time
+  app.post('/api/test-sheets-url', async (req, res) => {
+    try {
+      const { url } = req.body;
+      const targetUrl =
+        url && typeof url === 'string' && url.trim().startsWith('http')
+          ? url.trim()
+          : 'https://script.google.com/macros/s/AKfycbyKAY8xDvPkgjMowhNDeFqPYq07GQ_BjsrJQbtSsD6jotkhSkNA6oJ9qZrfZNxBZ6tL-w/exec';
+
+      const scriptRes = await fetch(targetUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Lead Teste Diagnóstico',
+          phone: '(21) 98765-4321',
+          cep: '26182-010',
+          planName: '800MB Cine PRO',
+          planPrice: 'R$ 159,90',
+          dataHora: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+        }),
+      });
+
+      const respText = await scriptRes.text();
+
+      if (
+        scriptRes.status === 401 ||
+        respText.includes('unable to open the file') ||
+        respText.includes('Page Not Found')
+      ) {
+        return res.json({
+          success: false,
+          status: 401,
+          error:
+            'Bloqueio do Google (Erro 401 - Não Autorizado): O seu Apps Script está configurado como "Somente eu". Acesse Extensões > Apps Script > Implantar > Gerenciar implantações > Editar e selecione "Quem pode acessar: Qualquer pessoa" (Anyone), depois clique em Implantar criando uma Nova versão.',
+          rawSnippet: respText.slice(0, 150),
+        });
+      }
+
+      if (scriptRes.ok || respText.includes('success')) {
+        return res.json({
+          success: true,
+          status: scriptRes.status,
+          message: 'Sucesso! O Google aceitou o envio e o lead foi gravado na sua planilha.',
+          rawSnippet: respText.slice(0, 150),
+        });
+      }
+
+      return res.json({
+        success: false,
+        status: scriptRes.status,
+        error: `Resposta incomum do Google (Status ${scriptRes.status}). Verifique se o código doPost foi colado corretamente.`,
+        rawSnippet: respText.slice(0, 150),
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
