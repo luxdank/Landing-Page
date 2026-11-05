@@ -44,12 +44,18 @@ export const Header: React.FC<HeaderProps> = ({
           >
             Cobertura
           </button>
-          <button
-            onClick={() => handleNavClick('atendimento')}
-            className="hover:text-white transition-colors cursor-pointer whitespace-nowrap focus:outline-none"
+          <a
+            href="https://wa.me/552127625350"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-emerald-400 transition-colors cursor-pointer whitespace-nowrap focus:outline-none flex items-center gap-1.5"
+            title="Fale Conosco pelo WhatsApp (21) 2762-5350"
           >
-            Atendimento
-          </button>
+            <span>Atendimento</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              (21) 2762-5350
+            </span>
+          </a>
         </nav>
 
         {/* CTA Button */}
@@ -87,12 +93,18 @@ export const Header: React.FC<HeaderProps> = ({
           >
             Cobertura
           </button>
-          <button
-            onClick={() => handleNavClick('atendimento')}
-            className="block w-full text-left py-2 px-3 text-slate-200 hover:bg-purple-900/30 rounded-lg text-sm font-medium"
+          <a
+            href="https://wa.me/552127625350"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center justify-between w-full py-2 px-3 text-emerald-400 hover:bg-emerald-950/40 rounded-lg text-sm font-semibold"
           >
-            Atendimento
-          </button>
+            <span>Atendimento WhatsApp</span>
+            <span className="text-xs font-bold text-white bg-emerald-600 px-2 py-0.5 rounded-full">
+              (21) 2762-5350
+            </span>
+          </a>
 
           <div className="pt-3 border-t border-purple-900/50">
             <button
