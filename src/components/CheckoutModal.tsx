@@ -21,14 +21,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 }) => {
   const [step, setStep] = useState<1 | 2>(1);
   const [name, setName] = useState('');
-  const [cpf, setCpf] = useState('');
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [neighborhood, setNeighborhood] = useState('Belford Roxo');
   const [cep, setCep] = useState('');
-  const [street, setStreet] = useState('');
-  const [number, setNumber] = useState('');
-  const [complement, setComplement] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
 
@@ -37,15 +31,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setIsSubmitting(true);
 
     const leadData = {
-      name,
-      cpf,
-      phone,
-      email,
-      neighborhood,
-      cep,
-      street,
-      number,
-      complement,
+      name: name.trim(),
+      phone: phone.trim(),
+      cep: cep.trim(),
       planName: `${plan.name} ${plan.subtitle}`.trim(),
       planPrice: `R$ ${plan.priceFidelity.toFixed(2).replace('.', ',')}`,
     };
@@ -53,14 +41,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     // 1. Prepare WhatsApp message & redirection URL
     // Number: (21) 2762-5350 -> 552127625350
     const chosenServiceName = `${plan.name} ${plan.subtitle}`.trim();
-    const formattedComplement = complement
-      ? complement.trim().startsWith('(') && complement.trim().endsWith(')')
-        ? ` ${complement.trim()}`
-        : ` (${complement.trim()})`
-      : '';
-    const addressFormatted = `${street}, nº ${number}${formattedComplement}`;
 
-    const message = `Olá! Acabei de me cadastrar pelo site da Nova ISP e desejo concluir minha contratação.\n\n*Serviço / Plano Escolhido:* ${chosenServiceName} (R$ ${plan.priceFidelity.toFixed(2).replace('.', ',')}/mês)\n\n*Meus Dados:*\n- *Nome:* ${name}\n- *CPF:* ${cpf}\n- *Telefone:* ${phone}\n- *E-mail:* ${email}\n- *Endereço:* ${addressFormatted}\n- *Bairro:* ${neighborhood}\n- *CEP:* ${cep}\n\nAguardo o retorno para agendamento!`;
+    const message = `Olá! Acabei de me cadastrar pelo site da Nova ISP e desejo concluir minha contratação.\n\n*Serviço / Plano Escolhido:* ${chosenServiceName} (R$ ${plan.priceFidelity.toFixed(2).replace('.', ',')}/mês)\n\n*Meus Dados:*\n- *Nome:* ${name.trim()}\n- *Contato:* ${phone.trim()}\n- *CEP:* ${cep.trim()}\n\nAguardo o retorno para agendamento!`;
 
     const targetPhone = '552127625350';
     const whatsappUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`;
@@ -110,19 +92,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setRedirectUrl(whatsappUrl);
     onSuccess();
 
-    // 5. Open WhatsApp redirection to (21) 2762-5350
-    try {
-      const opened = window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
-      if (!opened) {
-        setTimeout(() => {
-          window.location.assign(whatsappUrl);
-        }, 1200);
-      }
-    } catch {
-      setTimeout(() => {
-        window.location.assign(whatsappUrl);
-      }, 1200);
-    }
+    // 5. Redirecionamento direto (sem window.open para nunca ser bloqueado pelo navegador)
+    setTimeout(() => {
+      window.location.href = whatsappUrl;
+    }, 600);
   };
 
   return (
@@ -154,7 +127,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </span>
           </div>
           <span className="text-xs font-bold text-slate-500">
-            {step === 1 ? 'Confirmar Plano' : 'Dados do Assinante & Endereço'}
+            {step === 1 ? 'Confirmar Plano' : 'Nome, Contato & CEP'}
           </span>
         </div>
 
@@ -205,142 +178,60 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           </div>
         )}
 
-        {/* STEP 2: PERSONAL & ADDRESS DATA */}
+        {/* STEP 2: NOME, CONTATO E CEP */}
         {step === 2 && !redirectUrl && (
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <h3 className="text-base font-extrabold text-slate-900">Dados do Titular</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900">Seus Dados</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Preencha apenas 3 campos para agilizarmos sua contratação.
+              </p>
+            </div>
+
+            <div className="space-y-3.5">
+              {/* Nome */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Nome Completo</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Nome Completo
+                </label>
                 <input
                   type="text"
                   required
                   placeholder="Ex: Carlos Eduardo Silva"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none"
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none transition-colors"
                 />
               </div>
+
+              {/* Contato */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">CPF</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Contato (WhatsApp / Telefone)
+                </label>
                 <input
-                  type="text"
+                  type="tel"
                   required
-                  placeholder="000.000.000-00"
-                  value={cpf}
-                  onChange={(e) => setCpf(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">WhatsApp / Celular</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="(21) 98765-4321"
+                  placeholder="Ex: (21) 98765-4321"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none"
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none transition-colors"
                 />
               </div>
+
+              {/* CEP */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">E-mail</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <h3 className="text-base font-extrabold text-slate-900 pt-2">Endereço de Instalação</h3>
-
-            {/* Campo Bairro com 3 opções */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
-                <span>Bairro</span>
-                <span className="text-[11px] text-purple-700 font-semibold">Região de Cobertura Nova ISP</span>
-              </label>
-
-              {/* Botões de seleção rápida das 3 opções */}
-              <div className="grid grid-cols-3 gap-2 mb-2">
-                {(['Belford Roxo', 'Duque de Caxias', 'Piabetá'] as const).map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => setNeighborhood(opt)}
-                    className={`py-2 px-2 text-center rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                      neighborhood === opt
-                        ? 'bg-[#7738b5] text-white border-[#7738b5] shadow-sm ring-2 ring-purple-200'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
-                    }`}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-
-              {/* Select tradicional */}
-              <select
-                value={neighborhood}
-                onChange={(e) => setNeighborhood(e.target.value)}
-                required
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none bg-white font-medium text-slate-800"
-              >
-                <option value="Belford Roxo">Belford Roxo</option>
-                <option value="Duque de Caxias">Duque de Caxias</option>
-                <option value="Piabetá">Piabetá</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <div className="col-span-1">
-                <label className="block text-xs font-bold text-slate-700 mb-1">CEP</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>CEP</span>
+                  <span className="text-[11px] text-purple-700 font-semibold">Para consulta de viabilidade</span>
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="26182-010"
+                  placeholder="Ex: 26182-010"
                   value={cep}
                   onChange={(e) => setCep(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none"
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-xs font-bold text-slate-700 mb-1">Rua / Avenida</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: Rua Lamartine Júnior"
-                  value={street}
-                  onChange={(e) => setStreet(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Número</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ex: 12"
-                  value={number}
-                  onChange={(e) => setNumber(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none"
-                />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-xs font-bold text-slate-700 mb-1">Complemento / Apto</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Bloco C, Apto 102"
-                  value={complement}
-                  onChange={(e) => setComplement(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none"
+                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none transition-colors"
                 />
               </div>
             </div>

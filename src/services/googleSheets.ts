@@ -1,12 +1,12 @@
 export interface LeadPayload {
   name: string;
-  cpf: string;
   phone: string;
-  email: string;
-  neighborhood?: string;
   cep: string;
-  street: string;
-  number: string;
+  cpf?: string;
+  email?: string;
+  neighborhood?: string;
+  street?: string;
+  number?: string;
   complement?: string;
   planName: string;
   planPrice: string;
