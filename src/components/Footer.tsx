@@ -3,9 +3,10 @@ import { HOTLINK_IMAGES } from '../data/mockData';
 
 interface FooterProps {
   onScrollTo: (id: string) => void;
+  onOpenGoogleSheets?: () => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onScrollTo }) => {
+export const Footer: React.FC<FooterProps> = ({ onScrollTo, onOpenGoogleSheets }) => {
   const [imgError, setImgError] = useState(false);
 
   return (
@@ -126,8 +127,26 @@ export const Footer: React.FC<FooterProps> = ({ onScrollTo }) => {
           </div>
         </div>
 
-        <div className="border-t border-purple-900/30 pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
+        <div className="border-t border-purple-900/30 pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
           <p>© 2025 Nova ISP Telecomunicações S.A. Todos os direitos reservados.</p>
+          <div className="flex items-center gap-4">
+            {onOpenGoogleSheets && (
+              <button
+                type="button"
+                onClick={onOpenGoogleSheets}
+                className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-4 cursor-pointer"
+              >
+                📊 Conectar / Configurar Google Sheets
+              </button>
+            )}
+            <a
+              href="/api/leads/download"
+              download="planilha_leads_novaisp.csv"
+              className="text-xs font-semibold text-slate-400 hover:text-white underline underline-offset-4 cursor-pointer"
+            >
+              📥 Baixar Planilha Local (.csv)
+            </a>
+          </div>
           <p className="mt-2 sm:mt-0">Velocidade anunciada sujeita a viabilidade técnica.</p>
         </div>
       </div>

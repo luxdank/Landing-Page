@@ -92,10 +92,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setRedirectUrl(whatsappUrl);
     onSuccess();
 
-    // 5. Redirecionamento direto (sem window.open para nunca ser bloqueado pelo navegador)
+    // 5. Redirecionamento direto com tempo adequado para o webhook e API do Google responderem
     setTimeout(() => {
       window.location.href = whatsappUrl;
-    }, 600);
+    }, 1200);
   };
 
   return (

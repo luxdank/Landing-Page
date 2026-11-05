@@ -6,12 +6,14 @@ import { TelemedicinaSection } from './components/TelemedicinaSection';
 import { MobileAppSection } from './components/MobileAppSection';
 import { Footer } from './components/Footer';
 import { CheckoutModal } from './components/CheckoutModal';
+import { GoogleSheetsModal } from './components/GoogleSheetsModal';
 import { Plan } from './types';
 import { RESIDENTIAL_PLANS, TELEMEDICINA_PLAN } from './data/mockData';
 import { CheckCircle2 } from 'lucide-react';
 
 export default function App() {
   const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
+  const [isGoogleSheetsOpen, setIsGoogleSheetsOpen] = useState(false);
   const [successToast, setSuccessToast] = useState('');
 
   const scrollTo = (id: string) => {
@@ -61,7 +63,10 @@ export default function App() {
         <MobileAppSection />
       </main>
 
-      <Footer onScrollTo={scrollTo} />
+      <Footer
+        onScrollTo={scrollTo}
+        onOpenGoogleSheets={() => setIsGoogleSheetsOpen(true)}
+      />
 
       {/* Checkout / Subscription Modal */}
       {checkoutPlan && (
@@ -71,6 +76,12 @@ export default function App() {
           onSuccess={handleCheckoutSuccess}
         />
       )}
+
+      {/* Google Sheets Connection & Config Modal */}
+      <GoogleSheetsModal
+        isOpen={isGoogleSheetsOpen}
+        onClose={() => setIsGoogleSheetsOpen(false)}
+      />
 
       {/* Global Success Toast */}
       {successToast && (
