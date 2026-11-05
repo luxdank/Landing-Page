@@ -58,6 +58,31 @@ export const RESIDENTIAL_PLANS: Plan[] = [
     isFeatured: false,
     category: 'residential',
   },
+  {
+    id: 'plan-cinepro-800',
+    name: '800MB',
+    subtitle: 'Cine PRO',
+    speed: '800 Mega',
+    download: '800MB DOWNLOAD',
+    upload: '400MB UPLOAD',
+    includedServices: [
+      'PARAMOUNT+ INCLUSO',
+      'MAX (HBO) INCLUSO',
+      'CINE & SÉRIES STREAMING',
+      'POUPANET',
+      'WI-FI ALTO ALCANCE',
+    ],
+    priceFidelity: 159.90,
+    originalPrice: 179.90,
+    badges: [
+      'MELHOR CUSTO-BENEFÍCIO',
+      'PREÇO GARANTIDO POR 12 MESES',
+      'ECONOMIA DE R$ 240,00',
+    ],
+    themeColor: 'magenta',
+    isFeatured: true,
+    category: 'residential',
+  },
 ];
 
 export const TELEMEDICINA_PLAN: Plan = {

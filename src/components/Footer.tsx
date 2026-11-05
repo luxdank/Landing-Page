@@ -68,6 +68,14 @@ export const Footer: React.FC<FooterProps> = ({ onScrollTo }) => {
                   Fibra 800MB + Seguro
                 </button>
               </li>
+              <li>
+                <button
+                  onClick={() => onScrollTo('planos')}
+                  className="hover:text-[#e6007e] transition-colors cursor-pointer text-left"
+                >
+                  Fibra 800MB Cine PRO
+                </button>
+              </li>
             </ul>
           </div>
 
