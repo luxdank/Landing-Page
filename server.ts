@@ -46,9 +46,14 @@ async function startServer() {
       fs.appendFileSync(CSV_FILE, row, 'utf-8');
 
       // Server-side forward to Google Apps Script webhook (bypasses browser CORS completely)
-      if (appsScriptUrl && typeof appsScriptUrl === 'string' && appsScriptUrl.startsWith('http')) {
+      const targetAppsScriptUrl =
+        appsScriptUrl && typeof appsScriptUrl === 'string' && appsScriptUrl.startsWith('http')
+          ? appsScriptUrl
+          : 'https://script.google.com/macros/s/AKfycbyKAY8xDvPkgjMowhNDeFqPYq07GQ_BjsrJQbtSsD6jotkhSkNA6oJ9qZrfZNxBZ6tL-w/exec';
+
+      if (targetAppsScriptUrl) {
         try {
-          await fetch(appsScriptUrl, {
+          const scriptRes = await fetch(targetAppsScriptUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -66,6 +71,8 @@ async function startServer() {
               dataHora: date,
             }),
           });
+          const respText = await scriptRes.text();
+          console.log(`[Google Apps Script] Status: ${scriptRes.status}, Response: ${respText.slice(0, 150)}`);
         } catch (scriptErr) {
           console.warn('Forward to Google Apps Script notice:', scriptErr);
         }

@@ -310,12 +310,18 @@ export const GoogleSheetsModal: React.FC<GoogleSheetsModalProps> = ({ isOpen, on
                 <li>Apague o conteúdo padrão e <strong>cole o código abaixo</strong>.</li>
                 <li>Clique em <strong>Salvar (ícone de disquete)</strong>.</li>
                 <li>
-                  Clique em <strong>Implantar &gt; Nova implantação</strong>.
+                  Clique no botão azul <strong>Implantar &gt; Nova implantação</strong>.
                 </li>
                 <li>
-                  Selecione o tipo <strong>App da Web</strong>, configure <em>Quem pode acessar</em> para <strong>Qualquer pessoa (Anyone)</strong> e clique em Implantar.
+                  Clique na engrenagem ao lado de "Selecionar tipo" e escolha <strong>App da Web</strong>.
                 </li>
-                <li>Copie o link do App da Web e cole no campo abaixo para testar!</li>
+                <li className="bg-amber-100/70 p-2 rounded-lg text-amber-950 font-semibold border border-amber-300">
+                  ⚠️ <strong>PASSO CRÍTICO:</strong> No campo <u>"Quem pode acessar"</u>, altere obrigatoriamente de "Somente eu" para <strong>"Qualquer pessoa" (Anyone)</strong>. Se deixar "Somente eu", o Google bloqueia os envios com erro "Unable to open file".
+                </li>
+                <li>
+                  Em "Executar como", mantenha <strong>"Eu (seu email)"</strong> e clique em <strong>Implantar</strong>. Autorize o acesso na sua conta Google se solicitado.
+                </li>
+                <li>Copie a URL do App da Web gerada (termina com <code>/exec</code>) e cole no campo abaixo!</li>
               </ol>
             </div>
 

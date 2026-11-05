@@ -27,8 +27,11 @@ export const clearSpreadsheetId = (): void => {
   localStorage.removeItem(SPREADSHEET_ID_KEY);
 };
 
-export const getSavedAppsScriptUrl = (): string | null => {
-  return localStorage.getItem(APPS_SCRIPT_URL_KEY);
+export const DEFAULT_APPS_SCRIPT_URL =
+  'https://script.google.com/macros/s/AKfycbyKAY8xDvPkgjMowhNDeFqPYq07GQ_BjsrJQbtSsD6jotkhSkNA6oJ9qZrfZNxBZ6tL-w/exec';
+
+export const getSavedAppsScriptUrl = (): string => {
+  return localStorage.getItem(APPS_SCRIPT_URL_KEY) || DEFAULT_APPS_SCRIPT_URL;
 };
 
 export const saveAppsScriptUrl = (url: string): void => {
@@ -43,7 +46,7 @@ export const GOOGLE_APPS_SCRIPT_CODE = `/**
  * Código para Google Sheets da Nova ISP
  * Cole este código em: Extensões > Apps Script
  * Depois clique em Implantar > Nova Implantação > App da Web
- * Acesso: "Qualquer pessoa" (Anyone)
+ * IMPORTANTE: Configure "Quem pode acessar" como "Qualquer pessoa" (Anyone)
  */
 function doPost(e) {
   try {
@@ -54,20 +57,14 @@ function doPost(e) {
       sheet.appendRow([
         "Data/Hora",
         "Nome Completo",
-        "CPF",
-        "WhatsApp / Celular",
-        "E-mail",
-        "Bairro",
+        "WhatsApp / Telefone",
         "CEP",
-        "Rua / Avenida",
-        "Número",
-        "Complemento",
         "Plano Escolhido",
         "Valor Mensal",
         "Status"
       ]);
       
-      var headerRange = sheet.getRange(1, 1, 1, 13);
+      var headerRange = sheet.getRange(1, 1, 1, 7);
       headerRange.setBackground("#1f0d38");
       headerRange.setFontColor("#ffffff");
       headerRange.setFontWeight("bold");
@@ -75,24 +72,53 @@ function doPost(e) {
     }
     
     // Lê os dados do lead enviados pelo site
-    var data = JSON.parse(e.postData.contents);
+    var data = {};
+    if (e && e.postData && e.postData.contents) {
+      try {
+        data = JSON.parse(e.postData.contents);
+      } catch (jsonErr) {
+        data = e.parameter || {};
+      }
+    } else if (e && e.parameter) {
+      data = e.parameter;
+    }
+    
     var dataHora = Utilities.formatDate(new Date(), "America/Sao_Paulo", "dd/MM/yyyy HH:mm:ss");
     
-    sheet.appendRow([
-      dataHora,
-      data.name || "",
-      data.cpf || "",
-      data.phone || "",
-      data.email || "",
-      data.neighborhood || "",
-      data.cep || "",
-      data.street || "",
-      data.number || "",
-      data.complement || "",
-      data.planName || "",
-      data.planPrice || "",
-      "Novo Lead (WhatsApp)"
-    ]);
+    // Identifica se a planilha existente usa o modelo estendido (12 ou 13 colunas)
+    var lastCol = Math.max(sheet.getLastColumn(), 1);
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    var isLegacyWide = headers.length >= 10;
+    
+    if (isLegacyWide) {
+      // Formato compatível com a planilha que possui colunas de CPF, Email e Endereço
+      sheet.appendRow([
+        dataHora,
+        data.name || "",
+        data.cpf || "",
+        data.phone || "",
+        data.email || "",
+        data.neighborhood || "",
+        data.cep || "",
+        data.street || "",
+        data.number || "",
+        data.complement || "",
+        data.planName || "",
+        data.planPrice || "",
+        "Novo Lead (WhatsApp)"
+      ]);
+    } else {
+      // Formato compacto (Nome, Contato e CEP)
+      sheet.appendRow([
+        dataHora,
+        data.name || "",
+        data.phone || "",
+        data.cep || "",
+        data.planName || "",
+        data.planPrice || "",
+        "Novo Lead (WhatsApp)"
+      ]);
+    }
     
     return ContentService.createTextOutput(JSON.stringify({
       status: "success",

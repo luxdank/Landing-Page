@@ -6,6 +6,7 @@ import {
   getSavedSpreadsheetId,
   appendLeadToGoogleSheet,
   sendLeadToAppsScript,
+  getSavedAppsScriptUrl,
 } from '../services/googleSheets';
 
 interface CheckoutModalProps {
@@ -43,11 +44,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     const chosenServiceName = `${plan.name} ${plan.subtitle}`.trim();
 
     const message = `Olá! Acabei de me cadastrar pelo site da Nova ISP e desejo concluir minha contratação.\n\n*Serviço / Plano Escolhido:* ${chosenServiceName} (R$ ${plan.priceFidelity.toFixed(2).replace('.', ',')}/mês)\n\n*Meus Dados:*\n- *Nome:* ${name.trim()}\n- *Contato:* ${phone.trim()}\n- *CEP:* ${cep.trim()}\n\nAguardo o retorno para agendamento!`;
-
     const targetPhone = '552127625350';
     const whatsappUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(message)}`;
-
-    const appsScriptUrl = localStorage.getItem('novaisp_apps_script_url');
+    const appsScriptUrl = getSavedAppsScriptUrl();
 
     // 2. Perform all spreadsheet saves and wait for completion so no data is dropped
     try {
