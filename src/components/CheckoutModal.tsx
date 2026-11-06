@@ -24,11 +24,54 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [cep, setCep] = useState('');
+  const [errors, setErrors] = useState<{ name?: string; phone?: string; cep?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
 
+  const formatPhone = (val: string) => {
+    const raw = val.replace(/\D/g, '').slice(0, 11);
+    if (raw.length <= 2) return raw;
+    if (raw.length <= 6) return `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
+    if (raw.length <= 10) return `(${raw.slice(0, 2)}) ${raw.slice(2, 6)}-${raw.slice(6)}`;
+    return `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7, 11)}`;
+  };
+
+  const formatCep = (val: string) => {
+    const raw = val.replace(/\D/g, '').slice(0, 8);
+    if (raw.length <= 5) return raw;
+    return `${raw.slice(0, 5)}-${raw.slice(5)}`;
+  };
+
+  const validate = (): boolean => {
+    const newErrors: { name?: string; phone?: string; cep?: string } = {};
+
+    if (!name.trim()) {
+      newErrors.name = 'Nome completo é obrigatório.';
+    } else if (name.trim().length < 3) {
+      newErrors.name = 'Por favor, digite seu nome completo.';
+    }
+
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (!cleanPhone) {
+      newErrors.phone = 'Contato (WhatsApp / Telefone) é obrigatório.';
+    } else if (cleanPhone.length < 10) {
+      newErrors.phone = 'Digite um número válido com DDD (mínimo 10 dígitos).';
+    }
+
+    const cleanCep = cep.replace(/\D/g, '');
+    if (!cleanCep) {
+      newErrors.cep = 'CEP é obrigatório.';
+    } else if (cleanCep.length !== 8) {
+      newErrors.cep = 'Digite um CEP válido com 8 dígitos (Ex: 26182-010).';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (!validate()) return;
     setIsSubmitting(true);
 
     const leadData = {
@@ -179,59 +222,111 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
         {/* STEP 2: NOME, CONTATO E CEP */}
         {step === 2 && !redirectUrl && (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form id="checkout-lead-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <h3 className="text-base font-extrabold text-slate-900">Seus Dados</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-extrabold text-slate-900">Seus Dados</h3>
+                <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                  * Campos Obrigatórios
+                </span>
+              </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Preencha apenas 3 campos para agilizarmos sua contratação.
+                Preencha os 3 campos abaixo para prosseguirmos com a sua contratação.
               </p>
             </div>
 
             <div className="space-y-3.5">
               {/* Nome */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Nome Completo
+                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>
+                    Nome Completo <span className="text-rose-500">*</span>
+                  </span>
                 </label>
                 <input
                   type="text"
                   required
                   placeholder="Ex: Carlos Eduardo Silva"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none transition-colors"
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
+                  }}
+                  className={`w-full px-3.5 py-2.5 text-xs sm:text-sm border rounded-xl focus:outline-none transition-colors ${
+                    errors.name
+                      ? 'border-rose-500 bg-rose-50/30 focus:border-rose-600'
+                      : 'border-slate-300 focus:border-[#e6007e]'
+                  }`}
                 />
+                {errors.name && (
+                  <p className="text-[11px] text-rose-600 font-semibold mt-1 flex items-center gap-1">
+                    <span>⚠</span>
+                    <span>{errors.name}</span>
+                  </p>
+                )}
               </div>
 
               {/* Contato */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Contato (WhatsApp / Telefone)
+                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                  <span>
+                    Contato (WhatsApp / Telefone) <span className="text-rose-500">*</span>
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-normal">Com DDD</span>
                 </label>
                 <input
                   type="tel"
                   required
                   placeholder="Ex: (21) 98765-4321"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none transition-colors"
+                  onChange={(e) => {
+                    setPhone(formatPhone(e.target.value));
+                    if (errors.phone) setErrors((prev) => ({ ...prev, phone: undefined }));
+                  }}
+                  className={`w-full px-3.5 py-2.5 text-xs sm:text-sm border rounded-xl focus:outline-none transition-colors ${
+                    errors.phone
+                      ? 'border-rose-500 bg-rose-50/30 focus:border-rose-600'
+                      : 'border-slate-300 focus:border-[#e6007e]'
+                  }`}
                 />
+                {errors.phone && (
+                  <p className="text-[11px] text-rose-600 font-semibold mt-1 flex items-center gap-1">
+                    <span>⚠</span>
+                    <span>{errors.phone}</span>
+                  </p>
+                )}
               </div>
 
               {/* CEP */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
-                  <span>CEP</span>
+                  <span>
+                    CEP <span className="text-rose-500">*</span>
+                  </span>
                   <span className="text-[11px] text-purple-700 font-semibold">Para consulta de viabilidade</span>
                 </label>
                 <input
                   type="text"
                   required
+                  maxLength={9}
                   placeholder="Ex: 26182-010"
                   value={cep}
-                  onChange={(e) => setCep(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs sm:text-sm border border-slate-300 rounded-xl focus:border-[#e6007e] focus:outline-none transition-colors"
+                  onChange={(e) => {
+                    setCep(formatCep(e.target.value));
+                    if (errors.cep) setErrors((prev) => ({ ...prev, cep: undefined }));
+                  }}
+                  className={`w-full px-3.5 py-2.5 text-xs sm:text-sm border rounded-xl focus:outline-none transition-colors ${
+                    errors.cep
+                      ? 'border-rose-500 bg-rose-50/30 focus:border-rose-600'
+                      : 'border-slate-300 focus:border-[#e6007e]'
+                  }`}
                 />
+                {errors.cep && (
+                  <p className="text-[11px] text-rose-600 font-semibold mt-1 flex items-center gap-1">
+                    <span>⚠</span>
+                    <span>{errors.cep}</span>
+                  </p>
+                )}
               </div>
             </div>
           </form>
@@ -292,10 +387,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               </button>
             ) : (
               <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => handleSubmit()}
-                className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-full text-xs font-bold uppercase tracking-wider hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer ml-auto disabled:opacity-50"
+                type="submit"
+                form="checkout-lead-form"
+                disabled={isSubmitting || !name.trim() || !phone.trim() || !cep.trim()}
+                className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-full text-xs font-bold uppercase tracking-wider hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer ml-auto disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting ? (
                   <>
